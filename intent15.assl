@@ -1,0 +1,188 @@
+AS AutonomicNetwork {
+
+	ASSELF_MANAGEMENT {
+		SELF_CONFIGURING {
+			FLUENT inAutonomicNetworkConfiguration {
+				INITIATED_BY { EVENTS.TimeToConfiguration }
+				TERMINATED_BY {	EVENTS.ConfigurationDone }
+			}
+			MAPPING {
+				CONDITIONS { inAutonomicNetworkConfiguration }
+				DO_ACTIONS { ACTIONS.ConfigureAutonomicNetwork }
+			}
+		}
+	} // ASSELF_MANAGEMENT
+
+	ACTIONS {
+		ACTION IMPL Configuration {
+			TRIGGERS { EVENTS.ConfigurationDone }
+		}
+		ACTION ConfigureAutonomicNetwork {
+			GUARDS { ASSELF_MANAGEMENT.SELF_CONFIGURING.inAutonomicNetworkConfiguration }
+			DOES { call IMPL ACTIONS.Configuration }
+			ONERR_TRIGGERS { EVENTS.ConfigurationDenied }
+		}
+   } // ACTIONS
+
+	EVENTS {
+		EVENT TimeToConfiguration {
+			ACTIVATION { PERIOD {	1 MIN } }
+			DURATION { 500 MSEC	}
+		}
+		EVENT ConfigurationDone {	 DURATION { 500 MSEC	} }
+		EVENT ConfigurationDenied {  DURATION { 500 MSEC	} }
+	}//EVENTS
+
+}//AS
+
+ASIP{
+  MESSAGES{
+
+  //  MESSAGE StartMonitoringToolMsg{
+  //  SENDER { AES.Controller } 	RECEIVER { ANY } PRIORITY { 1 } MSG_TYPE {TEXT} BODY{"MONITORING"}
+  //  }
+
+    MESSAGE MonitoringMessage{
+      SENDER {ANY} 	RECEIVER { ANY } PRIORITY { 1 } MSG_TYPE {TEXT} BODY{"MONITORING IN PROCESS"}
+      }
+
+    }//MESSAGES
+
+    CHANNELS{
+      CHANNEL PUBLIC_LINK{
+        ACCEPTS{ASIP.MESSAGES.MonitoringMessage}
+        ACCESS{SEQUENTIAL}
+        DIRECTION{INOUT}
+      }
+    }
+
+    FUNCTIONS{
+      FUNCTION SendMonitoringMsg{
+        DOES{
+          ASIP.MESSAGES.MonitoringMessage >> ASIP.CHANNELS.PUBLIC_LINK
+          }
+        }
+      }//FUNCTIONS
+
+}//ASIP
+
+
+//==========AES==================//
+
+AES{
+
+    AE Controller{
+      AESELF_MANAGEMENT{
+        SELF_CONFIGURING{
+          FLUENT inStartMonitoringTool{
+              INITIATED_BY{EVENTS.TimeToRunMonitoringTool}
+              TERMINATED_BY{EVENTS.MonitoringToolStarted}
+          }//FLUENT
+          
+          FLUENT inDataSourceSelection{
+              INITIATED_BY{EVENTS.TimeToRunSelectDataSource}
+              TERMINATED_BY{EVENTS.DataSourceSelected}
+              }//FLUENT
+
+              
+         FLUENT inTrafficInspection{
+              INITIATED_BY{EVENTS.TimeToInspectTraffic}
+              TERMINATED_BY{EVENTS.TrafficInspected}
+                                    }//FLUENT
+
+          MAPPING {
+    					CONDITIONS { inStartMonitoringTool }
+    					DO_ACTIONS { ACTIONS.StartMonitoringTool }
+  				      }
+
+          MAPPING {
+      				CONDITIONS { inDataSourceSelection }
+      				DO_ACTIONS { ACTIONS.SelectDataSource }
+    				      }
+
+          MAPPING {
+              CONDITIONS { inTrafficInspection }
+              DO_ACTIONS { ACTIONS.InspectTraffic }
+                          }
+
+        }//SELF_CONFIGURING
+
+      }//AESELF_MANAGEMENT
+
+      AEIP{
+
+      //  FUNCTIONS{
+      //    FUNCTION SendMonitoringMsg{DOES {ASIP.MESSAGES.MonitoringMessage>>ASIP.CHANNELS.PUBLIC_LINK}}
+      //  }
+
+        MANAGED_ELEMENTS{
+          MANAGED_ELEMENT MonitoringTool{
+              INTERFACE_FUNCTION InitiateProgram{}
+              INTERFACE_FUNCTION IngressTrafficChecker{}
+              INTERFACE_FUNCTION EgressTrafficChecker{}
+            }
+          }//MANAGED_ELEMENT
+
+        }//AEIP
+
+      ACTIONS{
+
+          ACTION StartMonitoringTool{
+              GUARDS { AESELF_MANAGEMENT.SELF_CONFIGURING.inStartMonitoringTool }
+              DOES{
+                CALL AEIP.MANAGED_ELEMENTS.MonitoringTool.InitiateProgram
+                  }
+              TRIGGERS { EVENTS.MonitoringToolStarted}
+          }
+
+          ACTION SelectDataSource{
+              parameters{string DataSourceLoc}
+              GUARDS { AESELF_MANAGEMENT.SELF_CONFIGURING.inDataSourceSelection }
+              DOES{
+                IF DataSourceLoc="DORM" THEN CALL ASIP.FUNCTIONS.SendMonitoringMsg END
+                }
+              TRIGGERS{EVENTS.DataSourceSelected}
+          }
+
+          ACTION InspectTraffic{
+
+              GUARDS { AESELF_MANAGEMENT.SELF_CONFIGURING.inTrafficInspection }
+              DOES{
+                CALL ACTIONS.InspectTrafficType("ingress");
+                CALL ACTIONS.InspectTrafficType("egress")
+              }
+
+              TRIGGERS{EVENTS.TrafficInspected}
+          }
+
+          ACTION InspectTrafficType{
+
+            parameters{string TrafficType}
+            DOES{
+              IF TrafficType="ingress" THEN Call AEIP.MANAGED_ELEMENTS.MonitoringTool.IngressTrafficChecker END
+              ELSE
+              IF TrafficType="egress" THEN Call AEIP.MANAGED_ELEMENTS.MonitoringTool.EgressTrafficChecker END
+              END
+            }
+            TRIGGERS{EVENTS.monitoringDone}
+          }
+
+
+          }//ACTIONS
+
+        EVENTS{ ////
+          EVENT TimeToRunMonitoringTool{ACTIVATION {OCCURRED{AS.EVENTS.ConfigurationDone}}}///////////
+          EVENT MonitoringToolStarted{}
+          EVENT TimeToRunSelectDataSource{ACTIVATION {OCCURRED{EVENTS.MonitoringToolStarted}}}
+          EVENT DataSourceSelected{}//ACTIVATION {SENT{ASIP.MESSAGES.SendMonitoringMsg}}
+          EVENT TimeToInspectTraffic{}
+          EVENT TrafficInspected{}
+          EVENT monitoringDone{}
+
+
+        }//EVENTS
+
+    }//AE Controller
+
+
+}//AES
