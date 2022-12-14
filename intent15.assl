@@ -75,7 +75,8 @@ AES{
 
     AE Controller{
       AESELF_MANAGEMENT{
-        SELF_CONFIGURING{
+      OTHER_POLICIES{
+        POLICY MONITORING{
           FLUENT inStartMonitoringTool{
               INITIATED_BY{EVENTS.TimeToRunMonitoringTool}
               TERMINATED_BY{EVENTS.MonitoringToolStarted}
@@ -107,8 +108,8 @@ AES{
               DO_ACTIONS { ACTIONS.InspectTraffic }
                           }
 
-        }//SELF_CONFIGURING
-
+        }//MONITORING
+        }//OTHER_POLICIES
       }//AESELF_MANAGEMENT
 
       AEIP{
@@ -127,7 +128,7 @@ AES{
       ACTIONS{
 
           ACTION StartMonitoringTool{
-              GUARDS { AESELF_MANAGEMENT.SELF_CONFIGURING.inStartMonitoringTool }
+              GUARDS { AESELF_MANAGEMENT.OTHER_POLICIES.MONITORING.inStartMonitoringTool }
               DOES{
                 CALL AEIP.MANAGED_ELEMENTS.MonitoringTool.InitiateProgram
                   }
@@ -136,7 +137,7 @@ AES{
 
           ACTION SelectDataSource{
               parameters{string DataSourceLoc}
-              GUARDS { AESELF_MANAGEMENT.SELF_CONFIGURING.inDataSourceSelection }
+              GUARDS { AESELF_MANAGEMENT.OTHER_POLICIES.MONITORING.inDataSourceSelection }
               DOES{
                 IF DataSourceLoc="DORM" THEN CALL ASIP.FUNCTIONS.SendMonitoringMsg END
                 }
@@ -145,7 +146,7 @@ AES{
 
           ACTION InspectTraffic{
 
-              GUARDS { AESELF_MANAGEMENT.SELF_CONFIGURING.inTrafficInspection }
+              GUARDS { AESELF_MANAGEMENT.OTHER_POLICIES.MONITORING.inTrafficInspection }
               DOES{
                 CALL ACTIONS.InspectTrafficType("ingress");
                 CALL ACTIONS.InspectTrafficType("egress")
@@ -162,7 +163,7 @@ AES{
               ELSE
               IF TrafficType="egress" THEN Call AEIP.MANAGED_ELEMENTS.MonitoringTool.EgressTrafficChecker END
               END;
-				
+
 					CALL ASIP.FUNCTIONS.ReceiveMonitoringMsg
             }
             TRIGGERS{EVENTS.monitoringDone}
