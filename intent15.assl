@@ -59,6 +59,11 @@ ASIP{
           ASIP.MESSAGES.MonitoringMessage >> ASIP.CHANNELS.PUBLIC_LINK
           }
         }
+      FUNCTION ReceiveMonitoringMsg{
+       DOES{
+         ASIP.MESSAGES.MonitoringMessage << ASIP.CHANNELS.PUBLIC_LINK
+         }
+       }
       }//FUNCTIONS
 
 }//ASIP
@@ -75,13 +80,13 @@ AES{
               INITIATED_BY{EVENTS.TimeToRunMonitoringTool}
               TERMINATED_BY{EVENTS.MonitoringToolStarted}
           }//FLUENT
-          
+
           FLUENT inDataSourceSelection{
               INITIATED_BY{EVENTS.TimeToRunSelectDataSource}
               TERMINATED_BY{EVENTS.DataSourceSelected}
               }//FLUENT
 
-              
+
          FLUENT inTrafficInspection{
               INITIATED_BY{EVENTS.TimeToInspectTraffic}
               TERMINATED_BY{EVENTS.TrafficInspected}
@@ -156,10 +161,13 @@ AES{
               IF TrafficType="ingress" THEN Call AEIP.MANAGED_ELEMENTS.MonitoringTool.IngressTrafficChecker END
               ELSE
               IF TrafficType="egress" THEN Call AEIP.MANAGED_ELEMENTS.MonitoringTool.EgressTrafficChecker END
-              END
+              END;
+				
+					CALL ASIP.FUNCTIONS.ReceiveMonitoringMsg
             }
             TRIGGERS{EVENTS.monitoringDone}
           }
+
 
 
           }//ACTIONS
@@ -171,7 +179,7 @@ AES{
           EVENT DataSourceSelected{ACTIVATION {SENT{ASIP.MESSAGES.MonitoringMessage}}}
           EVENT TimeToInspectTraffic{}
           EVENT TrafficInspected{}
-          EVENT monitoringDone{}
+          EVENT monitoringDone{ACTIVATION {RECEIVED{ASIP.MESSAGES.MonitoringMessage}}}
 
 
         }//EVENTS
