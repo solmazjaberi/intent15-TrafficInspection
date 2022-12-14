@@ -38,9 +38,6 @@ AS AutonomicNetwork {
 ASIP{
   MESSAGES{
 
-  //  MESSAGE StartMonitoringToolMsg{
-  //  SENDER { AES.Controller } 	RECEIVER { ANY } PRIORITY { 1 } MSG_TYPE {TEXT} BODY{"MONITORING"}
-  //  }
 
     MESSAGE MonitoringMessage{
       SENDER {ANY} 	RECEIVER { ANY } PRIORITY { 1 } MSG_TYPE {TEXT} BODY{"MONITORING IN PROCESS"}
@@ -111,9 +108,6 @@ AES{
 
       AEIP{
 
-      //  FUNCTIONS{
-      //    FUNCTION SendMonitoringMsg{DOES {ASIP.MESSAGES.MonitoringMessage>>ASIP.CHANNELS.PUBLIC_LINK}}
-      //  }
 
         MANAGED_ELEMENTS{
           MANAGED_ELEMENT MonitoringTool{
@@ -171,10 +165,10 @@ AES{
           }//ACTIONS
 
         EVENTS{ ////
-          EVENT TimeToRunMonitoringTool{ACTIVATION {OCCURRED{AS.EVENTS.ConfigurationDone}}}///////////
+          EVENT TimeToRunMonitoringTool{ACTIVATION {OCCURRED{AS.EVENTS.ConfigurationDone}}}
           EVENT MonitoringToolStarted{}
           EVENT TimeToRunSelectDataSource{ACTIVATION {OCCURRED{EVENTS.MonitoringToolStarted}}}
-          EVENT DataSourceSelected{}//ACTIVATION {SENT{ASIP.MESSAGES.SendMonitoringMsg}}
+          EVENT DataSourceSelected{ACTIVATION {SENT{ASIP.MESSAGES.MonitoringMessage}}}
           EVENT TimeToInspectTraffic{}
           EVENT TrafficInspected{}
           EVENT monitoringDone{}
